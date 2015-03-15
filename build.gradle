@@ -1,0 +1,40 @@
+apply plugin: 'java'
+
+sourceCompatibility = 1.7
+version = '1.0'
+
+def springVersion = '4.1.5.RELEASE'
+def atomikosVersion = '3.9.3'
+def hibernateVersion = '4.1.9.Final'
+
+repositories {
+    mavenLocal()
+    jcenter()
+}
+
+dependencies {
+
+    compile "org.springframework:spring-context:${springVersion}"
+    compile "org.springframework:spring-test:${springVersion}"
+    compile "org.springframework:spring-tx:${springVersion}"
+    compile "org.springframework:spring-jms:${springVersion}"
+    compile "org.springframework:spring-orm:${springVersion}"
+    compile "org.springframework.data:spring-data-jpa:1.7.2.RELEASE"
+
+    compile "com.atomikos:transactions-jms:${atomikosVersion}"
+    compile "com.atomikos:transactions-hibernate3:${atomikosVersion}"
+
+    compile "org.hibernate:hibernate-entitymanager:${hibernateVersion}"
+
+    compile "net.java.xadisk:xadisk:1.2.2@jar"
+    compile "commons-io:commons-io:2.4"
+
+    compile "org.apache.activemq:activemq-core:5.7.0"
+
+    runtime 'org.slf4j:slf4j-log4j12:1.6.6'
+    runtime 'javax.transaction:jta:1.1'
+    runtime 'com.h2database:h2:1.4.186'
+    runtime 'javax.resource:connector-api:1.5'
+
+    testCompile 'junit:junit:4.11'
+}

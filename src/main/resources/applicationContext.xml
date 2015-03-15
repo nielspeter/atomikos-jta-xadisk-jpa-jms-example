@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd">
+
+    <!-- Scans the classpath for annotated components -->
+    <context:component-scan base-package="io.strandberg.jta.examples"/>
+
+    <!-- Create proxy instances of Repository interfaces -->
+    <jpa:repositories base-package="io.strandberg.jta.examples"/>
+
+    <!-- Annotation driven transactions -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- Atomikos JTA transaction manager -->
+    <bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="allowCustomIsolationLevels" value="true"/>
+
+        <property name="transactionManager">
+            <bean class="com.atomikos.icatch.jta.UserTransactionManager" init-method="init" destroy-method="close">
+                <property name="forceShutdown" value="false"/>
+            </bean>
+        </property>
+
+        <property name="userTransaction">
+            <bean class="com.atomikos.icatch.jta.J2eeUserTransaction">
+                <property name="transactionTimeout" value="300"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!-- JPA -->
+    <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+        <!-- Entity annotation scan -->
+        <property name="packagesToScan" value="io.strandberg.jta.examples"/>
+        <!-- Data source (H2) -->
+        <property name="jtaDataSource">
+            <bean class="com.atomikos.jdbc.AtomikosDataSourceBean" init-method="init" destroy-method="close">
+                <property name="uniqueResourceName" value="AtomikosDataSource"/>
+                <property name="poolSize" value="1"/>
+                <property name="testQuery" value="SELECT 1"/>
+                <property name="xaDataSource">
+                    <bean class="org.h2.jdbcx.JdbcDataSource">
+                        <property name="URL" value="jdbc:h2:mem:db"/>
+                        <property name="user" value="user"/>
+                        <property name="password" value="password"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"/>
+        </property>
+        <property name="jpaProperties">
+            <props>
+                <prop key="hibernate.transaction.factory_class">org.hibernate.transaction.CMTTransactionFactory</prop>
+                <!-- Setup Hibernate to participate in the Atomikos transaction -->
+                <prop key="hibernate.transaction.manager_lookup_class">com.atomikos.icatch.jta.hibernate3.TransactionManagerLookup</prop>
+                <prop key="hibernate.hbm2ddl.auto">create-drop</prop>
+                <prop key="hibernate.dialect">org.hibernate.dialect.H2Dialect</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- ActiveMQ connection factory -->
+    <!-- JTA/XA-enabled JMS -->
+    <bean id="atomikosJmsConnectionFactory" class="com.atomikos.jms.AtomikosConnectionFactoryBean" init-method="init">
+        <property name="uniqueResourceName" value="ActiveMQXA"/>
+        <property name="xaConnectionFactory">
+            <bean class="org.apache.activemq.ActiveMQXAConnectionFactory">
+                <property name="brokerURL" value="vm://localhost?broker.persistent=false"/>
+            </bean>
+        </property>
+        <property name="poolSize" value="1"/>
+    </bean>
+
+
+    <bean id="jmsTemplate" class="org.springframework.jms.core.JmsTemplate">
+        <property name="connectionFactory" ref="atomikosJmsConnectionFactory"/>
+        <property name="receiveTimeout" value="2000"/>
+        <!-- "sessionTransacted" has to be set to "true" to start an transaction for every incoming JMS message -->
+        <property name="sessionTransacted" value="true"/>
+        <!-- sessionAcknowledgeMode has to be set to javax.jms.Session.SESSION_TRANSACTED -->
+        <property name="sessionAcknowledgeMode" value="0"/>
+    </bean>
+
+    <!-- xadisk -->
+    <context:component-scan base-package="io.strandberg.xadisk"/>
+
+    <bean id="standaloneFileSystemConfiguration" class="org.xadisk.filesystem.standalone.StandaloneFileSystemConfiguration">
+        <constructor-arg index="0" value="build/tmp/xadisk"/>
+        <constructor-arg index="1" value="instance-1"/>
+    </bean>
+
+</beans>
