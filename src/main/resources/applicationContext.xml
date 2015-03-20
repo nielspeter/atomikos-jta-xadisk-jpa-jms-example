@@ -47,7 +47,7 @@
                 <property name="testQuery" value="SELECT 1"/>
                 <property name="xaDataSource">
                     <bean class="org.h2.jdbcx.JdbcDataSource">
-                        <property name="URL" value="jdbc:h2:mem:db"/>
+                        <property name="URL" value="jdbc:h2:mem:db;DB_CLOSE_ON_EXIT=FALSE"/>
                         <property name="user" value="user"/>
                         <property name="password" value="password"/>
                     </bean>
